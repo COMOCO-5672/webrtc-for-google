@@ -28,6 +28,8 @@
 #include "rtc_base/win32_socket_init.h"
 #include "system_wrappers/include/field_trial.h"
 #include "test/field_trial.h"
+#include "rtc_base/logging.h"
+#include "rtc_base/log_sinks.h"
 
 namespace {
 // A helper class to translate Windows command line arguments into UTF8,
@@ -76,6 +78,16 @@ int PASCAL wWinMain(HINSTANCE instance,
   rtc::WinsockInitializer winsock_init;
   rtc::PhysicalSocketServer ss;
   rtc::AutoSocketServerThread main_thread(&ss);
+
+  std::shared_ptr<rtc::FileRotatingLogSink> file_sink;
+  file_sink.reset(new rtc::FileRotatingLogSink("E:/shared_github/webrtc/log"
+      , "rtc_log"
+      , 10 * 1024 * 1024
+      , 5));
+
+  file_sink->Init();
+
+  rtc::LogMessage::AddLogToStream(file_sink.get(), rtc::LS_INFO);
 
   WindowsCommandLineArguments win_args;
   int argc = win_args.argc();
