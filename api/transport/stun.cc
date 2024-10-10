@@ -10,10 +10,6 @@
 
 #include "api/transport/stun.h"
 
-#if defined(WEBRTC_POSIX)
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif
 #include <string.h>
 
 #include <algorithm>  // IWYU pragma: keep
@@ -36,6 +32,7 @@
 #include "rtc_base/ip_address.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/message_digest.h"
+#include "rtc_base/net_helpers.h"
 #include "rtc_base/socket_address.h"
 #include "system_wrappers/include/metrics.h"
 
@@ -112,7 +109,6 @@ const char STUN_ERROR_REASON_UNSUPPORTED_PROTOCOL[] = "Unsupported Protocol";
 const char STUN_ERROR_REASON_ROLE_CONFLICT[] = "Role Conflict";
 const char STUN_ERROR_REASON_SERVER_ERROR[] = "Server Error";
 
-const char TURN_MAGIC_COOKIE_VALUE[] = {'\x72', '\xC6', '\x4B', '\xC6'};
 const char EMPTY_TRANSACTION_ID[] = "0000000000000000";
 const uint32_t STUN_FINGERPRINT_XOR_VALUE = 0x5354554E;
 const int SERVER_NOT_REACHABLE_ERROR = 701;
@@ -365,24 +361,6 @@ bool StunMessage::ValidateMessageIntegrity32ForTesting(
     const char* data,
     size_t size,
     const std::string& password) {
-  return ValidateMessageIntegrityOfType(STUN_ATTR_GOOG_MESSAGE_INTEGRITY_32,
-                                        kStunMessageIntegrity32Size, data, size,
-                                        password);
-}
-
-// Deprecated
-bool StunMessage::ValidateMessageIntegrity(const char* data,
-                                           size_t size,
-                                           const std::string& password) {
-  return ValidateMessageIntegrityOfType(STUN_ATTR_MESSAGE_INTEGRITY,
-                                        kStunMessageIntegritySize, data, size,
-                                        password);
-}
-
-// Deprecated
-bool StunMessage::ValidateMessageIntegrity32(const char* data,
-                                             size_t size,
-                                             const std::string& password) {
   return ValidateMessageIntegrityOfType(STUN_ATTR_GOOG_MESSAGE_INTEGRITY_32,
                                         kStunMessageIntegrity32Size, data, size,
                                         password);
@@ -1444,36 +1422,11 @@ std::unique_ptr<StunAttribute> CopyStunAttribute(
   return copy;
 }
 
-StunAttributeValueType RelayMessage::GetAttributeValueType(int type) const {
-  switch (type) {
-    case STUN_ATTR_LIFETIME:
-      return STUN_VALUE_UINT32;
-    case STUN_ATTR_MAGIC_COOKIE:
-      return STUN_VALUE_BYTE_STRING;
-    case STUN_ATTR_BANDWIDTH:
-      return STUN_VALUE_UINT32;
-    case STUN_ATTR_DESTINATION_ADDRESS:
-      return STUN_VALUE_ADDRESS;
-    case STUN_ATTR_SOURCE_ADDRESS2:
-      return STUN_VALUE_ADDRESS;
-    case STUN_ATTR_DATA:
-      return STUN_VALUE_BYTE_STRING;
-    case STUN_ATTR_OPTIONS:
-      return STUN_VALUE_UINT32;
-    default:
-      return StunMessage::GetAttributeValueType(type);
-  }
-}
-
-StunMessage* RelayMessage::CreateNew() const {
-  return new RelayMessage();
-}
-
 StunAttributeValueType TurnMessage::GetAttributeValueType(int type) const {
   switch (type) {
     case STUN_ATTR_CHANNEL_NUMBER:
       return STUN_VALUE_UINT32;
-    case STUN_ATTR_TURN_LIFETIME:
+    case STUN_ATTR_LIFETIME:
       return STUN_VALUE_UINT32;
     case STUN_ATTR_XOR_PEER_ADDRESS:
       return STUN_VALUE_XOR_ADDRESS;
